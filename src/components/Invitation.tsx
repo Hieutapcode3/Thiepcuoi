@@ -30,7 +30,7 @@ export default function Invitation({ intro = introConfig, startOpened = false }:
   const [showCover, setShowCover] = useState(!startOpened); // màn bìa còn trên cùng
   const [playing, setPlaying] = useState(false);
   const audio = useRef<HTMLAudioElement>(null);
-  const [volume, setVolume] = useState(0.7);
+  const [volume, setVolume] = useState(0.5);
   const userPaused = useRef(false); // khách đã chủ động tắt nhạc → không tự bật lại
   const [ambient, setAmbient] = useState(false);
   // Trong lúc màn bìa còn: khoá cuộn + tô màu dải chừa cho thanh cuộn (scrollbar-gutter) cùng màu bìa.
