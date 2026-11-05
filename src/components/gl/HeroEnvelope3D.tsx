@@ -18,14 +18,25 @@ const FOV = 22;
 
 const yAt = (row: number) => ENV_H / 2 - row / IMG_W;
 
-type Props = { photo: string; alt: string; onFail: () => void };
+type Props = {
+  photo: string; alt: string; onFail: () => void;
+  /** chừng nào gate.current = false thì phong bì còn đóng (dùng cho hiệu ứng chuyển cảnh) */
+  gate?: { current: boolean };
+  speed?: number;
+  /** canvas đang bị CSS phóng to bao nhiêu lần → vẽ nét hơn tương ứng */
+  resScale?: { current: number };
+  /** gọi khi khung hình đầu tiên đã vẽ xong */
+  onReady?: () => void;
+  /** gọi khi phong bì đã mở xong (ảnh trượt lên hết) */
+  onOpened?: () => void;
+};
 
 /**
  * Phong bì 3D: nắp phong bì (có con dấu sáp) lật mở → ảnh cưới trượt lên từ trong phong bì → hoa hiện ra.
  * Các lớp nằm ở độ sâu khác nhau nên nghiêng theo chuột / con quay sẽ thấy chiều sâu (thị sai).
  * Bố cục khi nghỉ khớp từng pixel với bản HTML cũ.
  */
-export default function HeroEnvelope3D({ photo, alt, onFail }: Props) {
+export default function HeroEnvelope3D({ photo, alt, onFail, gate, speed = 1, onReady, resScale, onOpened }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -107,7 +118,7 @@ export default function HeroEnvelope3D({ photo, alt, onFail }: Props) {
       // ---- ảnh cưới (khung trắng + bóng) ----
       const PW = 0.585;
       const PH = 0.728 * ENV_H;
-      const S = 1100;
+      const S = Math.min(1900, Math.max(1100, photoI.naturalWidth / PW)); // độ phân giải khung ảnh: theo ảnh gốc (nét khi phóng to)
       const pad = 40;
       const pc = makeCanvas(PW * S + pad * 2, PH * S + pad * 2);
       pc.ctx.shadowColor = "rgba(56,10,14,.38)";
@@ -166,9 +177,14 @@ export default function HeroEnvelope3D({ photo, alt, onFail }: Props) {
       const DROP = 0.95;
       const nrm = new THREE.Vector3();
       const pt = new THREE.Vector3();
+      let readySent = false;
+      let openedSent = false;
       st.onFrame = (dt, t) => {
-        if (start < 0) start = t;
-        const a = reduced ? 99 : t - start;
+        if (resScale) st.setResScale(resScale.current);
+        if (start < 0 && (!gate || gate.current)) start = t;
+        const a = reduced ? 99 : start < 0 ? 0 : (t - start) * speed;
+        if (!openedSent && a >= T_PHOTO + D_PHOTO) { openedSent = true; setTimeout(() => { if (!dead) onOpened?.(); }, 0); }
+        if (!readySent) { readySent = true; setTimeout(() => { if (!dead) onReady?.(); }, 0); }
 
         // nắp: π (đóng, phủ lên mặt tiền) → 0 (mở phẳng phía sau)
         const pf = easeInOutCubic(clamp01((a - T_FLAP) / D_FLAP));

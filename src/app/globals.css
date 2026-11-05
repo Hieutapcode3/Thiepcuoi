@@ -2,19 +2,30 @@
 @tailwind components;
 @tailwind utilities;
 
-html { scroll-behavior: smooth; }
+/* luôn chừa chỗ cho thanh cuộn → trang không bị xê dịch khi thanh cuộn hiện/ẩn (lúc mở thiệp, lúc khoá cuộn) */
+html { scroll-behavior: smooth; scrollbar-gutter: stable; }
 body {
-  background-color: #e4e4e7;
+  background-color: #ffffff;
   color: #511419;
   -webkit-font-smoothing: antialiased;
 }
 
 /* Giấy: ảnh vân giấy (public/art/paper.webp) nhân với màu kem */
+/* giống mẫu: nền kem sáng #fff7eb + vân giấy mờ 40% (multiply) */
 .paper-bg {
-  background-color: #f1e7d6;
+  background-color: #fff7eb;
+  isolation: isolate;
+}
+.paper-bg::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
   background-image: url("/art/paper.webp");
   background-size: 900px auto;
-  background-blend-mode: multiply;
+  opacity: .4;
+  mix-blend-mode: multiply;
 }
 .paper-card {
   background-color: #ebdfcc;
@@ -83,8 +94,10 @@ body {
 .heart-burst { position: fixed; z-index: 60; opacity: 0; animation: heart-burst 1.1s ease-out both; }
 @keyframes cover-out { to { opacity: 0; } }
 .cover-out { animation: cover-out .4s ease-out 1s forwards; }
-@keyframes page-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-.page-in { animation: page-in .7s ease-out both; }
+/* bìa chỉ mờ đi khi trang thiệp phía sau đã dựng xong (tránh khựng) */
+.cover-leave { animation: cover-out .5s ease-in-out forwards; }
+@keyframes page-in { from { opacity: 0; } to { opacity: 1; } }
+.page-in { animation: page-in .7s ease-out backwards; }
 
 /* ---- Bao lì xì ---- */
 @keyframes igbGiftBob { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-5px) } }

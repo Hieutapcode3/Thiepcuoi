@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { hasWebGL, prefersReducedMotion } from "@/lib/gl/support";
 import { wedding } from "@/data/wedding";
+import { introConfig, type IntroConfig } from "@/data/intro";
 import Cover from "./Cover";
 import Hero from "./Hero";
 import Info from "./Info";
@@ -16,20 +17,52 @@ import MusicButton from "./MusicButton";
 // Nền cánh hoa 3D + bụi vàng (Three.js) — chỉ tải ở trình duyệt
 const AmbientScene = dynamic(() => import("./gl/AmbientScene"), { ssr: false });
 
-export default function Invitation() {
-  const [opened, setOpened] = useState(false); // trang thiệp đã hiện
-  const [showCover, setShowCover] = useState(true); // màn bìa còn trên cùng
+/** màu `hex` phủ với độ đậm `a` lên nền trắng */
+function mixOverWhite(hex: string, a: number) {
+  const n = parseInt(hex.replace("#", "").padEnd(6, "0").slice(0, 6), 16);
+  const ch = (v: number) => Math.round(255 * (1 - a) + v * a);
+  return `rgb(${ch((n >> 16) & 255)}, ${ch((n >> 8) & 255)}, ${ch(n & 255)})`;
+}
+
+/** intro: cấu hình chuyển cảnh (mặc định lấy từ src/data/intro.ts) · startOpened: bỏ qua trang bìa (dùng ở /lab) */
+export default function Invitation({ intro = introConfig, startOpened = false }: { intro?: IntroConfig; startOpened?: boolean }) {
+  const [opened, setOpened] = useState(startOpened); // trang thiệp đã hiện
+  const [showCover, setShowCover] = useState(!startOpened); // màn bìa còn trên cùng
   const [playing, setPlaying] = useState(false);
   const audio = useRef<HTMLAudioElement>(null);
   const [volume, setVolume] = useState(0.7);
   const userPaused = useRef(false); // khách đã chủ động tắt nhạc → không tự bật lại
   const [ambient, setAmbient] = useState(false);
+  // Trong lúc màn bìa còn: khoá cuộn + tô màu dải chừa cho thanh cuộn (scrollbar-gutter) cùng màu bìa.
+  // Khi bìa mờ đi: dải đó chuyển dần sang màu nền tối của hiệu ứng → không lộ vệt trắng, không xê dịch.
+  useEffect(() => {
+    const h = document.documentElement;
+    if (showCover) {
+      h.style.overflow = "hidden";
+      h.style.backgroundColor = "#4a1016";
+      return;
+    }
+    h.style.overflow = "";
+    const t = setTimeout(() => { h.style.transition = ""; h.style.backgroundColor = ""; }, 4000);
+    return () => clearTimeout(t);
+  }, [showCover]);
+  const onCoverLeave = () => {
+    const h = document.documentElement;
+    h.style.transition = "background-color .5s ease-in-out";
+    h.style.backgroundColor = intro.enabled ? mixOverWhite(intro.dimColor, intro.dim) : "#ffffff";
+  };
+  const [pageReady, setPageReady] = useState(false); // phong bì đầu trang đã vẽ xong → cho bìa mờ đi
+  useEffect(() => {
+    if (!opened || pageReady) return;
+    const t = setTimeout(() => setPageReady(true), 3000); // chờ tối đa 3s
+    return () => clearTimeout(t);
+  }, [opened, pageReady]);
   useEffect(() => { setAmbient(hasWebGL() && !prefersReducedMotion()); }, []);
   const hasMusic = wedding.music.url !== "";
 
-  // Mở thẳng nếu URL có ?open=1 (giống bản gốc)
+  // Tải lại trang luôn quay về màn bìa: dọn ?open=1 cũ (nếu có) khỏi thanh địa chỉ
   useEffect(() => {
-    if (new URLSearchParams(location.search).get("open") === "1") { setOpened(true); setShowCover(false); }
+    if (new URLSearchParams(location.search).has("open")) history.replaceState(null, "", location.pathname);
   }, []);
 
   useEffect(() => { if (audio.current) audio.current.volume = volume; }, [volume, opened]);
@@ -55,26 +88,26 @@ export default function Invitation() {
     else { userPaused.current = true; a.pause(); setPlaying(false); }
   };
 
-  // Lúc bấm "Mở thiệp": đổi URL + bật nhạc (phải nằm trong thao tác bấm để qua chính sách autoplay).
-  // Trang thiệp hiện ra sau (onReveal) khi hiệu ứng bìa chạy được ~1s, bìa gỡ hẳn ở onDone.
+  // Lúc bấm "Mở thiệp": bật nhạc (phải nằm trong thao tác bấm để qua chính sách autoplay).
+  // Trang thiệp (kể cả phong bì 3D, cánh hoa 3D) được dựng sẵn PHÍA SAU màn bìa ngay sau cú bấm,
+  // để phần việc nặng (tải ảnh, biên dịch shader) xong trước khi bìa mờ đi → chuyển cảnh không bị khựng.
   const start = () => {
-    history.replaceState(null, "", "?open=1");
-    // Phát nhạc ngay trong thao tác bấm nút để qua được chính sách autoplay
     audio.current?.play().then(() => setPlaying(true)).catch(() => {});
+    setTimeout(() => setOpened(true), 150); // để hiệu ứng con dấu kịp chạy trước
   };
 
   return (
-    <main className="min-h-screen bg-[#e4e4e7] text-wine">
-      <div className="paper-bg relative mx-auto min-h-screen w-full max-w-[900px] overflow-clip shadow-[0_0_40px_rgba(0,0,0,0.18)]">
+    <main className="min-h-screen bg-white text-wine">
+      <div className="paper-bg relative mx-auto min-h-screen w-full max-w-[900px] overflow-clip md:border md:border-[#51141922]">
       {hasMusic && <audio ref={audio} src={wedding.music.url} loop preload="auto" />}
-      {showCover && <Cover onStart={start} onReveal={() => setOpened(true)} onDone={() => setShowCover(false)} />}
+      {showCover && <Cover onStart={start} onReveal={() => setOpened(true)} onDone={() => setShowCover(false)} canLeave={pageReady} onLeave={onCoverLeave} />}
       {opened && (
-        <div className="page-in relative overflow-x-clip">
+        <div className={`${intro.enabled ? "" : "page-in "}relative overflow-x-clip`}>
           {/* Hình kiến trúc cổ điển mờ làm nền (tự vẽ) */}
           {[["3.4%", "170%"], ["27.5%", "150%"], ["52%", "158%"], ["bottom", "155%"]].map(([top, w]) => (
             <img key={top} src="/art/castle-background.webp" alt="" aria-hidden className="pointer-events-none absolute left-1/2 z-0 max-w-none -translate-x-1/2 opacity-[0.1]" style={{ ...(top === "bottom" ? { bottom: 0 } : { top }), width: `min(${w}, 900px)` }} />
           ))}
-          <Hero />
+          <Hero intro={intro.enabled ? intro : null} canStart={!showCover} onReady={() => setPageReady(true)} />
           <Info />
           <Album />
           <Reception />
@@ -87,7 +120,7 @@ export default function Invitation() {
           </footer>
         </div>
       )}
-      {opened && !showCover && ambient && <AmbientScene />}
+      {opened && ambient && <AmbientScene />}
       {opened && hasMusic && <MusicButton playing={playing} onToggle={toggle} volume={volume} onVolume={setVolume} />}
       </div>
     </main>

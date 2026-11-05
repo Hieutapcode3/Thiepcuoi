@@ -12,6 +12,8 @@ export type Stage = {
   /** gọi mỗi khung hình; dt tính bằng giây, t là tổng thời gian */
   onFrame: ((dt: number, t: number) => void) | null;
   dispose: () => void;
+  /** nhân độ phân giải vẽ (vd. khi canvas bị CSS phóng to k lần thì gọi setResScale(k) để không bị mờ) */
+  setResScale: (k: number) => void;
 };
 
 type Options = { fov?: number; maxDpr?: number; antialias?: boolean; shadows?: boolean };
@@ -25,7 +27,8 @@ type Options = { fov?: number; maxDpr?: number; antialias?: boolean; shadows?: b
 export function createStage(canvas: HTMLCanvasElement, opts: Options = {}): Stage {
   const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: opts.antialias ?? true, powerPreference: "default" });
   renderer.setClearColor(0x000000, 0);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, opts.maxDpr ?? 2));
+  const baseDpr = Math.min(window.devicePixelRatio || 1, opts.maxDpr ?? 2);
+  renderer.setPixelRatio(baseDpr);
   if (opts.shadows) {
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -34,7 +37,7 @@ export function createStage(canvas: HTMLCanvasElement, opts: Options = {}): Stag
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(opts.fov ?? 35, 1, 0.1, 100);
 
-  const stage: Stage = { renderer, scene, camera, canvas, size: { w: 1, h: 1 }, onResize: null, onFrame: null, dispose: () => {} };
+  const stage: Stage = { renderer, scene, camera, canvas, size: { w: 1, h: 1 }, onResize: null, onFrame: null, dispose: () => {}, setResScale: () => {} };
 
   const resize = () => {
     const w = Math.max(1, canvas.clientWidth);
@@ -70,6 +73,18 @@ export function createStage(canvas: HTMLCanvasElement, opts: Options = {}): Stag
 
   resize();
   raf = requestAnimationFrame(tick);
+
+  let resK = 1;
+  stage.setResScale = (k: number) => {
+    k = Math.max(1, k);
+    if (Math.abs(k - resK) < 0.01) return;
+    resK = k;
+    // giới hạn: tối đa 3 pixel thật / 1 px CSS và cạnh dài ≤ 4096 px (nhẹ cho máy yếu)
+    const maxSide = Math.max(stage.size.w, stage.size.h);
+    const pr = Math.min(baseDpr * k, 3, 4096 / maxSide);
+    renderer.setPixelRatio(pr);
+    renderer.setSize(stage.size.w, stage.size.h, false);
+  };
 
   stage.dispose = () => {
     cancelAnimationFrame(raf);

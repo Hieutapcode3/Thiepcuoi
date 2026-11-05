@@ -11,7 +11,7 @@ export const viewport: Viewport = { width: "device-width", initialScale: 1, them
 
 // Font tải lúc chạy từ Google Fonts (muốn tự host: dùng next/font/local).
 const FONTS =
-  "https://fonts.googleapis.com/css2?family=Viaoda+Libre&family=Pinyon+Script&family=EB+Garamond:wght@300;400&family=Libre+Baskerville:wght@400;700&family=Lora:wght@400;500;600&family=Montserrat:wght@400;500;600&family=Playfair+Display:wght@400;600&display=swap";
+  "https://fonts.googleapis.com/css2?family=Viaoda+Libre&family=Cormorant+Garamond:wght@500;600&family=The+Nautigal&family=Pinyon+Script&family=EB+Garamond:wght@300;400&family=Libre+Baskerville:wght@400;700&family=Lora:wght@400;500;600&family=Montserrat:wght@400;500;600&family=Playfair+Display:wght@400;600&display=swap";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

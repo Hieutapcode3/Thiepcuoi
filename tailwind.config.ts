@@ -20,6 +20,8 @@ const config: Config = {
         script: ['"Pinyon Script"', '"Great Vibes"', "cursive"],
         name: ['"EB Garamond"', '"Times New Roman"', "serif"],
         body: ['"Libre Baskerville"', "Baskerville", '"Times New Roman"', "serif"],
+        cormorant: ['"Cormorant Garamond"', '"Times New Roman"', "serif"],
+        nautigal: ['"The Nautigal"', '"Pinyon Script"', "cursive"],
         head: ['"Times New Roman"', "Times", "serif"],
         button: ["Lora", "serif"],
         ui: ["Montserrat", "system-ui", "sans-serif"],

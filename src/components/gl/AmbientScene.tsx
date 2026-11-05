@@ -75,12 +75,7 @@ export default function AmbientScene() {
     }
     stage.onResize = () => { hh = visibleHeight(FOV, CAM_Z) / 2; hw = hh * camera.aspect; };
 
-    // gió + thị sai theo cuộn trang
-    let lastScroll = window.scrollY;
-    let wind = 0;
-    let scrollDy = 0;
-    const onScroll = () => { scrollDy += window.scrollY - lastScroll; lastScroll = window.scrollY; };
-    window.addEventListener("scroll", onScroll, { passive: true });
+    // Cánh hoa rơi độc lập, không bị cuộn trang kéo theo (không gió / thị sai theo cuộn)
 
     const tilt = getTilt();
     let tx = 0;
@@ -89,17 +84,12 @@ export default function AmbientScene() {
       tx += (tilt.x - tx) * Math.min(1, dt * 2);
       camera.position.x = tx * 0.5;
       camera.lookAt(0, 0, 0);
-      const worldPerPx = (hh * 2) / Math.max(1, stage.size.h);
-      wind += (Math.max(-2, Math.min(2, scrollDy / Math.max(dt, 0.001) * 0.0025)) - wind) * Math.min(1, dt * 4);
-      const dy = scrollDy * worldPerPx;
-      scrollDy = 0;
 
       for (let i = 0; i < N; i++) {
         const p = petals[i];
         const depthK = (CAM_Z - p.z) / CAM_Z;
         p.y -= p.vy * dt;
-        p.y += dy * (0.25 + 0.5 * (1 - depthK + 0.4)); // cuộn xuống → cánh hoa trôi lên chậm hơn trang
-        p.x += (Math.sin(t * p.swayF + p.ph) * p.sway + wind * 1.4) * dt;
+        p.x += (Math.sin(t * p.swayF + p.ph) * p.sway) * dt;
         p.rot.x += p.spin.x * dt;
         p.rot.y += p.spin.y * dt;
         p.rot.z += p.spin.z * dt;
@@ -116,7 +106,6 @@ export default function AmbientScene() {
     };
 
     return () => {
-      window.removeEventListener("scroll", onScroll);
       stage.dispose();
     };
   }, []);

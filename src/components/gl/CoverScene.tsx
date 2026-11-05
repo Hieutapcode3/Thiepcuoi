@@ -114,7 +114,7 @@ export default function CoverScene({ opening, origin, cardRef, onFail }: Props) 
 
     // ---- tim lơ lửng ----
     const floaters: Floater[] = [];
-    const N = isSmallScreen() ? 12 : 22;
+    const N = 0; // không còn tim 3D lơ lửng ở trang bìa: tim rơi nhẹ do CSS (Cover.tsx) đảm nhiệm
     const scatter = (f: Floater) => {
       const card = cardNdc();
       let p = new THREE.Vector3();

@@ -2,13 +2,8 @@
 import { wedding } from "@/data/wedding";
 import { parseDate } from "@/lib/dates";
 import { useEffect, useRef, useState } from "react";
-import dynamic from "next/dynamic";
 import { Flower, Heart } from "./Art";
-import { hasWebGL, prefersReducedMotion } from "@/lib/gl/support";
 import { requestMotionPermission } from "@/lib/gl/tilt";
-
-// Three.js chỉ tải ở trình duyệt (không render phía server)
-const CoverScene = dynamic(() => import("./gl/CoverScene"), { ssr: false });
 
 const FALL_COLORS = ["#c9a24a", "#e0c27a", "#d98a92", "#f3e8de"];
 const HEARTS_FALL = Array.from({ length: 14 }, (_, i) => ({
@@ -23,23 +18,30 @@ const HEARTS_FALL = Array.from({ length: 14 }, (_, i) => ({
 type Burst = { dx: number; dy: number; rs: number; re: number; size: number; color: string; delay: number };
 const HEART_COLORS = ["#c9a24a", "#a8323b", "#ece4d8", "#8b3a44", "#e0c27a"];
 const REVEAL_MS = 1000; // thời điểm trang thiệp hiện ra bên dưới
-const DONE_MS = 1450; // thời điểm gỡ màn bìa
 
 /**
  * Màn bìa toàn màn hình. Bấm "Mở thiệp": con dấu vỡ + vòng sáng → hoa phóng lớn rồi mờ dần →
  * 32 trái tim bắn ra → tấm thiệp bay lên → bìa mờ đi để lộ trang thiệp.
  * (Nhịp thời gian quan sát từ bản mẫu; toàn bộ code và hình dạng là tự viết.)
  */
-export default function Cover({ onStart, onReveal, onDone }: { onStart: () => void; onReveal: () => void; onDone: () => void }) {
+export default function Cover({ onStart, onReveal, onDone, onLeave, canLeave = true }: { onStart: () => void; onReveal: () => void; onDone: () => void; onLeave?: () => void; canLeave?: boolean }) {
   const { y, m, d } = parseDate(wedding.reception.date);
   const [opening, setOpening] = useState(false);
   const [bursts, setBursts] = useState<Burst[]>([]);
   const [origin, setOrigin] = useState({ x: 0, y: 0 });
+  const [timeUp, setTimeUp] = useState(false); // hiệu ứng bìa đã chạy đủ ~1s
+  const [leaving, setLeaving] = useState(false);
+  // Bìa mờ đi khi: đã đủ thời gian VÀ trang thiệp phía sau đã sẵn sàng
+  useEffect(() => {
+    if (!timeUp || !canLeave || leaving) return;
+    setLeaving(true);
+    onLeave?.();
+    const t = setTimeout(onDone, 520);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [timeUp, canLeave]);
   const seal = useRef<HTMLDivElement>(null);
   const card = useRef<HTMLDivElement>(null);
-  // "pending": chưa biết · "on": dùng tim 3D (Three.js) · "off": không có WebGL / giảm chuyển động → tim CSS
-  const [gl, setGl] = useState<"pending" | "on" | "off">("pending");
-  useEffect(() => { setGl(hasWebGL() && !prefersReducedMotion() ? "on" : "off"); }, []);
 
   const start = () => {
     if (opening) return;
@@ -56,13 +58,12 @@ export default function Cover({ onStart, onReveal, onDone }: { onStart: () => vo
     }));
     setOpening(true);
     setTimeout(onReveal, REVEAL_MS);
-    setTimeout(onDone, DONE_MS);
+    setTimeout(() => setTimeUp(true), REVEAL_MS);
   };
 
   return (
-    <div className={`fixed inset-0 z-50 flex items-center justify-center overflow-hidden ${opening ? "cover-out" : ""}`} style={{ background: "linear-gradient(to bottom right, #6e1a20, #511419, #380a0e)" }}>
-      {gl === "on" && <CoverScene opening={opening} origin={origin} cardRef={card} onFail={() => setGl("off")} />}
-      {gl === "off" && HEARTS_FALL.map((p, i) => (
+    <div className={`fixed inset-0 z-50 flex items-center justify-center overflow-hidden ${leaving ? "cover-leave" : ""}`} style={{ background: "linear-gradient(to bottom right, #6e1a20, #511419, #380a0e)" }}>
+      {HEARTS_FALL.map((p, i) => (
         <span key={i} className="petal" style={{ left: p.left, width: p.size, height: p.size, color: p.color, animationDuration: `${p.dur}s`, animationDelay: `${p.delay}s`, ["--sway" as string]: p.sway }}>
           <Heart className="h-full w-full" />
         </span>
@@ -110,7 +111,7 @@ export default function Cover({ onStart, onReveal, onDone }: { onStart: () => vo
           </button>
         </div>
       </div>
-      {opening && gl === "off" && bursts.map((b, i) => (
+      {opening && bursts.map((b, i) => (
         <span key={i} className="heart-burst pointer-events-none" style={{ left: origin.x, top: origin.y, width: b.size, height: b.size, color: b.color, animationDelay: `${500 + b.delay}ms`, ["--dx" as string]: `${b.dx}px`, ["--dy" as string]: `${b.dy}px`, ["--rs" as string]: `${b.rs}deg`, ["--re" as string]: `${b.re}deg` }}>
           <Heart className="h-full w-full" />
         </span>

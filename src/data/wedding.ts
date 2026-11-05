@@ -59,15 +59,14 @@ export const wedding = {
     { time: "21:00", title: "Kết thúc tiệc", icon: undefined as Icon | undefined },
   ],
 
-  // ---- Hình ảnh (thay bằng ảnh thật: .webp/.jpg tỉ lệ dọc 2:3) ----
-  heroPhoto: "/photos/hero.svg",
+  // ---- Hình ảnh (ảnh cưới thật trong public/photos; muốn đổi thì thay file hoặc sửa đường dẫn) ----
+  heroPhoto: "/photos/anh-cuoi-2.webp",
   album: [
-    "/photos/photo-1.svg",
-    "/photos/photo-2.svg",
-    "/photos/photo-3.svg",
-    "/photos/photo-4.svg",
-    "/photos/photo-5.svg",
-    "/photos/photo-6.svg",
+    "/photos/anh-cuoi-5.webp",
+    "/photos/anh-cuoi-1.webp",
+    "/photos/anh-cuoi-2.webp",
+    "/photos/anh-cuoi-3.webp",
+    "/photos/anh-cuoi-4.webp",
   ],
 
   // ---- Nhạc nền: bỏ file .mp3 hợp lệ vào public/music rồi điền đường dẫn. Để "" thì ẩn nút nhạc. ----
