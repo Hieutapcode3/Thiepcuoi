@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { Analytics } from "@vercel/analytics/next";
 import { wedding } from "@/data/wedding";
 
 export const metadata: Metadata = {
@@ -21,7 +22,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link rel="stylesheet" href={FONTS} />
       </head>
-      <body className="font-body">{children}</body>
+      <body className="font-body">
+        {children}
+        {/* Vercel Web Analytics: đếm lượt xem / khách truy cập (xem ở tab Analytics trên vercel.com) */}
+        <Analytics />
+      </body>
     </html>
   );
 }
